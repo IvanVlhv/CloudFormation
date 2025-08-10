@@ -73,7 +73,11 @@ Resources:
         IamInstanceProfile:
           Arn: !GetAtt InstanceProfile.Arn
         KeyName: !If [HasKeyName, !Ref KeyName, !Ref AWS::NoValue]
-        UserData: !If [HasUserData, !Base64 !Ref UserData, !Ref AWS::NoValue]
+        UserData: !If
+          - HasUserData
+          - !Base64
+            Ref: UserData
+          - !Ref AWS::NoValue
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup

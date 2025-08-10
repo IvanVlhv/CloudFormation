@@ -1,0 +1,213 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Main stack deploying network, compute and database resources using nested
+  stacks
+Parameters:
+  ProjectName:
+    Type: String
+  AwsRegion:
+    Type: String
+  VpcCidr:
+    Type: String
+  PubSubNat1Cidr:
+    Type: String
+  PubSubNat2Cidr:
+    Type: String
+  PrivSubWeb1Cidr:
+    Type: String
+  PrivSubWeb2Cidr:
+    Type: String
+  PrivSubDb1Cidr:
+    Type: String
+  PrivSubDb2Cidr:
+    Type: String
+  DbUsername:
+    Type: String
+  DbPassword:
+    Type: String
+    NoEcho: true
+  WebInstanceType:
+    Type: String
+  KeyName:
+    Type: String
+    Default: ''
+  UserData:
+    Type: String
+    Default: ''
+  MinSize:
+    Type: Number
+    Default: 1
+  MaxSize:
+    Type: Number
+    Default: 4
+  DesiredCapacity:
+    Type: Number
+    Default: 2
+  CpuTarget:
+    Type: Number
+    Default: 65
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.eu-central-1.amazonaws.com/moja-kanta-za-zavrsni/a365b34eec4701118eed9bf07d3fd8bf.template
+      Parameters:
+        ProjectName:
+          Ref: ProjectName
+        AwsRegion:
+          Ref: AwsRegion
+        VpcCidr:
+          Ref: VpcCidr
+        PubSubNat1Cidr:
+          Ref: PubSubNat1Cidr
+        PubSubNat2Cidr:
+          Ref: PubSubNat2Cidr
+        PrivSubWeb1Cidr:
+          Ref: PrivSubWeb1Cidr
+        PrivSubWeb2Cidr:
+          Ref: PrivSubWeb2Cidr
+        PrivSubDb1Cidr:
+          Ref: PrivSubDb1Cidr
+        PrivSubDb2Cidr:
+          Ref: PrivSubDb2Cidr
+  NatStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.eu-central-1.amazonaws.com/moja-kanta-za-zavrsni/c776882cf83b6fc26de9756d14a14c08.template
+      Parameters:
+        IgwId:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.IgwId
+        VpcId:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.VpcId
+        PubSubNat1Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PubSubNat1Id
+        PubSubNat2Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PubSubNat2Id
+        PrivSubWeb1Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PrivSubWeb1Id
+        PrivSubWeb2Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PrivSubWeb2Id
+        PrivSubDb1Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PrivSubDb1Id
+        PrivSubDb2Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PrivSubDb2Id
+  SecurityGroupStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.eu-central-1.amazonaws.com/moja-kanta-za-zavrsni/8c7866a4522fdd1d712079821030fbf5.template
+      Parameters:
+        VpcId:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.VpcId
+  AlbStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.eu-central-1.amazonaws.com/moja-kanta-za-zavrsni/7f1b8b2020b7557403ab7499e067c182.template
+      Parameters:
+        ProjectName:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.ProjectName
+        VpcId:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.VpcId
+        AlbSecGroupId:
+          Fn::GetAtt:
+          - SecurityGroupStack
+          - Outputs.AlbSecGroupId
+        PubSubNat1Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PubSubNat1Id
+        PubSubNat2Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PubSubNat2Id
+  WebStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: NatStack
+    Properties:
+      TemplateURL: https://s3.eu-central-1.amazonaws.com/moja-kanta-za-zavrsni/2a890a3740a6bdd49578badc7a06f6ec.template
+      Parameters:
+        ProjectName:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.ProjectName
+        WebSecGroupId:
+          Fn::GetAtt:
+          - SecurityGroupStack
+          - Outputs.WebSecGroupId
+        PrivSubWeb1Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PrivSubWeb1Id
+        PrivSubWeb2Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PrivSubWeb2Id
+        TargetGroupArn:
+          Fn::GetAtt:
+          - AlbStack
+          - Outputs.TargetGroupArn
+        InstanceType:
+          Ref: WebInstanceType
+        KeyName:
+          Ref: KeyName
+        UserData:
+          Ref: UserData
+        MinSize:
+          Ref: MinSize
+        MaxSize:
+          Ref: MaxSize
+        DesiredCapacity:
+          Ref: DesiredCapacity
+        CpuTarget:
+          Ref: CpuTarget
+  DbStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.eu-central-1.amazonaws.com/moja-kanta-za-zavrsni/8425576207bc21cc51f2efe91b30dafa.template
+      Parameters:
+        ProjectName:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.ProjectName
+        PrivSubDb1Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PrivSubDb1Id
+        PrivSubDb2Id:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PrivSubDb2Id
+        DbUsername:
+          Ref: DbUsername
+        DbPassword:
+          Ref: DbPassword
+        DbSecGroupId:
+          Fn::GetAtt:
+          - SecurityGroupStack
+          - Outputs.DbSecGroupId
+Outputs:
+  AlbDns:
+    Value:
+      Fn::GetAtt:
+      - AlbStack
+      - Outputs.AlbDns
