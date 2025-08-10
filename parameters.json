@@ -1,0 +1,20 @@
+[
+  { "ParameterKey": "ProjectName", "ParameterValue": "my-project" },
+  { "ParameterKey": "AwsRegion", "ParameterValue": "us-east-1" },
+  { "ParameterKey": "VpcCidr", "ParameterValue": "10.0.0.0/16" },
+  { "ParameterKey": "PubSubNat1Cidr", "ParameterValue": "10.0.1.0/24" },
+  { "ParameterKey": "PubSubNat2Cidr", "ParameterValue": "10.0.2.0/24" },
+  { "ParameterKey": "PrivSubWeb1Cidr", "ParameterValue": "10.0.3.0/24" },
+  { "ParameterKey": "PrivSubWeb2Cidr", "ParameterValue": "10.0.4.0/24" },
+  { "ParameterKey": "PrivSubDb1Cidr", "ParameterValue": "10.0.5.0/24" },
+  { "ParameterKey": "PrivSubDb2Cidr", "ParameterValue": "10.0.6.0/24" },
+  { "ParameterKey": "DbUsername", "ParameterValue": "" },
+  { "ParameterKey": "DbPassword", "ParameterValue": "" },
+  { "ParameterKey": "WebInstanceType", "ParameterValue": "t3.micro" },
+  { "ParameterKey": "KeyName", "ParameterValue": "" },
+  { "ParameterKey": "UserData", "ParameterValue": "" },
+  { "ParameterKey": "MinSize", "ParameterValue": "1" },
+  { "ParameterKey": "MaxSize", "ParameterValue": "4" },
+  { "ParameterKey": "DesiredCapacity", "ParameterValue": "2" },
+  { "ParameterKey": "CpuTarget", "ParameterValue": "65" }
+]
