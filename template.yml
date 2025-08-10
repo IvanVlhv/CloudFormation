@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Main stack deploying network, compute and database resources using nested stacks
+
+Parameters:
+  ProjectName:
+    Type: String
+  AwsRegion:
+    Type: String
+  VpcCidr:
+    Type: String
+  PubSubNat1Cidr:
+    Type: String
+  PubSubNat2Cidr:
+    Type: String
+  PrivSubWeb1Cidr:
+    Type: String
+  PrivSubWeb2Cidr:
+    Type: String
+  PrivSubDb1Cidr:
+    Type: String
+  PrivSubDb2Cidr:
+    Type: String
+  DbUsername:
+    Type: String
+  DbPassword:
+    Type: String
+    NoEcho: true
+  WebInstanceType:
+    Type: String
+  KeyName:
+    Type: String
+    Default: ""
+  UserData:
+    Type: String
+    Default: ""
+  MinSize:
+    Type: Number
+    Default: 1
+  MaxSize:
+    Type: Number
+    Default: 4
+  DesiredCapacity:
+    Type: Number
+    Default: 2
+  CpuTarget:
+    Type: Number
+    Default: 65
+
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: modules/vpc.yml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        AwsRegion: !Ref AwsRegion
+        VpcCidr: !Ref VpcCidr
+        PubSubNat1Cidr: !Ref PubSubNat1Cidr
+        PubSubNat2Cidr: !Ref PubSubNat2Cidr
+        PrivSubWeb1Cidr: !Ref PrivSubWeb1Cidr
+        PrivSubWeb2Cidr: !Ref PrivSubWeb2Cidr
+        PrivSubDb1Cidr: !Ref PrivSubDb1Cidr
+        PrivSubDb2Cidr: !Ref PrivSubDb2Cidr
+
+  NatStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: modules/nat.yml
+      Parameters:
+        IgwId: !GetAtt VPCStack.Outputs.IgwId
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+        PubSubNat1Id: !GetAtt VPCStack.Outputs.PubSubNat1Id
+        PubSubNat2Id: !GetAtt VPCStack.Outputs.PubSubNat2Id
+        PrivSubWeb1Id: !GetAtt VPCStack.Outputs.PrivSubWeb1Id
+        PrivSubWeb2Id: !GetAtt VPCStack.Outputs.PrivSubWeb2Id
+        PrivSubDb1Id: !GetAtt VPCStack.Outputs.PrivSubDb1Id
+        PrivSubDb2Id: !GetAtt VPCStack.Outputs.PrivSubDb2Id
+
+  SecurityGroupStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: modules/security-group.yml
+      Parameters:
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+
+  AlbStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: modules/alb.yml
+      Parameters:
+        ProjectName: !GetAtt VPCStack.Outputs.ProjectName
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+        AlbSecGroupId: !GetAtt SecurityGroupStack.Outputs.AlbSecGroupId
+        PubSubNat1Id: !GetAtt VPCStack.Outputs.PubSubNat1Id
+        PubSubNat2Id: !GetAtt VPCStack.Outputs.PubSubNat2Id
+
+  WebStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: NatStack
+    Properties:
+      TemplateURL: modules/web.yml
+      Parameters:
+        ProjectName: !GetAtt VPCStack.Outputs.ProjectName
+        WebSecGroupId: !GetAtt SecurityGroupStack.Outputs.WebSecGroupId
+        PrivSubWeb1Id: !GetAtt VPCStack.Outputs.PrivSubWeb1Id
+        PrivSubWeb2Id: !GetAtt VPCStack.Outputs.PrivSubWeb2Id
+        TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupArn
+        InstanceType: !Ref WebInstanceType
+        KeyName: !Ref KeyName
+        UserData: !Ref UserData
+        MinSize: !Ref MinSize
+        MaxSize: !Ref MaxSize
+        DesiredCapacity: !Ref DesiredCapacity
+        CpuTarget: !Ref CpuTarget
+
+  DbStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: modules/db.yml
+      Parameters:
+        ProjectName: !GetAtt VPCStack.Outputs.ProjectName
+        PrivSubDb1Id: !GetAtt VPCStack.Outputs.PrivSubDb1Id
+        PrivSubDb2Id: !GetAtt VPCStack.Outputs.PrivSubDb2Id
+        DbUsername: !Ref DbUsername
+        DbPassword: !Ref DbPassword
+        DbSecGroupId: !GetAtt SecurityGroupStack.Outputs.DbSecGroupId
+
+Outputs:
+  AlbDns:
+    Value: !GetAtt AlbStack.Outputs.AlbDns

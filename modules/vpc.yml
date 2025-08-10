@@ -1,0 +1,161 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC with public and private subnets
+
+Parameters:
+  ProjectName:
+    Type: String
+  AwsRegion:
+    Type: String
+  VpcCidr:
+    Type: String
+  PubSubNat1Cidr:
+    Type: String
+  PubSubNat2Cidr:
+    Type: String
+  PrivSubWeb1Cidr:
+    Type: String
+  PrivSubWeb2Cidr:
+    Type: String
+  PrivSubDb1Cidr:
+    Type: String
+  PrivSubDb2Cidr:
+    Type: String
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-vpc'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-igw'
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PubSubNat1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PubSubNat1Cidr
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: pub_sub_nat_1
+
+  PubSubNat2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PubSubNat2Cidr
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: pub_sub_nat_2
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: public_route_table
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PubSubNat1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PubSubNat1
+      RouteTableId: !Ref PublicRouteTable
+
+  PubSubNat2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PubSubNat2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivSubWeb1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivSubWeb1Cidr
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: priv_sub_web_1
+
+  PrivSubWeb2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivSubWeb2Cidr
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: priv_sub_web_2
+
+  PrivSubDb1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivSubDb1Cidr
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: priv_sub_db_1
+
+  PrivSubDb2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivSubDb2Cidr
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: priv_sub_db_2
+
+Outputs:
+  ProjectName:
+    Value: !Ref ProjectName
+  AwsRegion:
+    Value: !Ref AwsRegion
+  IgwId:
+    Value: !Ref InternetGateway
+  VpcId:
+    Value: !Ref VPC
+  PubSubNat1Id:
+    Value: !Ref PubSubNat1
+  PubSubNat2Id:
+    Value: !Ref PubSubNat2
+  PrivSubWeb1Id:
+    Value: !Ref PrivSubWeb1
+  PrivSubWeb2Id:
+    Value: !Ref PrivSubWeb2
+  PrivSubDb1Id:
+    Value: !Ref PrivSubDb1
+  PrivSubDb2Id:
+    Value: !Ref PrivSubDb2

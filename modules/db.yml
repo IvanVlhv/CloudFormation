@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: RDS MySQL database
+
+Parameters:
+  ProjectName:
+    Type: String
+  PrivSubDb1Id:
+    Type: String
+  PrivSubDb2Id:
+    Type: String
+  DbUsername:
+    Type: String
+  DbPassword:
+    Type: String
+    NoEcho: true
+  DbSecGroupId:
+    Type: String
+
+Resources:
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnets for RDS
+      SubnetIds:
+        - !Ref PrivSubDb1Id
+        - !Ref PrivSubDb2Id
+      Tags:
+        - Key: Name
+          Value: db-subnet-group
+
+  DbInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: zavrsni-db
+      Engine: mysql
+      EngineVersion: '8.0'
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 20
+      MasterUsername: !Ref DbUsername
+      MasterUserPassword: !Ref DbPassword
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DbSecGroupId
+      PubliclyAccessible: false
+      MultiAZ: false
+      DeleteAutomatedBackups: true
+      DeletionProtection: false
+      BackupRetentionPeriod: 0
+
+Outputs:
+  DbEndpoint:
+    Value: !Sub '${DbInstance.Endpoint.Address}:${DbInstance.Endpoint.Port}'

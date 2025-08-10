@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: NAT gateways and private routing
+
+Parameters:
+  IgwId:
+    Type: String
+  VpcId:
+    Type: String
+  PubSubNat1Id:
+    Type: String
+  PubSubNat2Id:
+    Type: String
+  PrivSubWeb1Id:
+    Type: String
+  PrivSubWeb2Id:
+    Type: String
+  PrivSubDb1Id:
+    Type: String
+  PrivSubDb2Id:
+    Type: String
+
+Resources:
+  EipNat1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: eip_nat_1
+
+  EipNat2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: eip_nat_2
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EipNat1.AllocationId
+      SubnetId: !Ref PubSubNat1Id
+      Tags:
+        - Key: Name
+          Value: nat-1
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EipNat2.AllocationId
+      SubnetId: !Ref PubSubNat2Id
+      Tags:
+        - Key: Name
+          Value: nat-2
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: private_rt_1
+
+  PrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  Web1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivSubWeb1Id
+      RouteTableId: !Ref PrivateRouteTable1
+
+  Web2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivSubWeb2Id
+      RouteTableId: !Ref PrivateRouteTable1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: private_rt_2
+
+  PrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  Db1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivSubDb1Id
+      RouteTableId: !Ref PrivateRouteTable2
+
+  Db2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivSubDb2Id
+      RouteTableId: !Ref PrivateRouteTable2
